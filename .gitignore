@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Database lokal (berisi data peminjaman asli)
+database.sqlite
+database.sqlite-shm
+database.sqlite-wal

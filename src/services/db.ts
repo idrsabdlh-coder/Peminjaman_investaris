@@ -24,6 +24,8 @@ const KEYS = {
   loanItems: 'kantor_db_loan_items',
   users: 'kantor_db_users',
 } as const;
+const API = `http://${window.location.hostname}:3001/api`;
+type StoreKey = 'items' | 'loans' | 'loanItems';
 
 // ─── Seed Data ─────────────────────────────────────────────────────────────────
 const SEED_USERS: User[] = [
@@ -111,59 +113,79 @@ class DBService {
   }
 
   // ── Storage R/W ─────────────────────────────────────────────────────────────
-  private readItems(): Item[] {
+   private cache: { items: Item[]; loans: Loan[]; loanItems: LoanItem[] } = {
+    items: [],
+    loans: [],
+    loanItems: [],
+  };
+  private lastSnapshot = '';
+  private pending = 0;
+
+  private push(key: StoreKey, data: unknown[]): void {
+    this.pending++;
+    fetch(`${API}/state/${key}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+      .catch(() => console.error('Gagal menyimpan ke server'))
+      .finally(() => {
+        this.pending--;
+      });
+  }
+
+  private async pull(notifyIfChanged: boolean): Promise<void> {
+    if (this.pending > 0) return;
     try {
-      const raw = localStorage.getItem(KEYS.items);
-      return raw ? JSON.parse(raw) : [];
+      const res = await fetch(`${API}/state`);
+      const state = await res.json();
+      if (this.pending > 0) return; // ada penyimpanan yang baru mulai
+      const snapshot = JSON.stringify(state);
+      if (snapshot === this.lastSnapshot) return;
+      this.lastSnapshot = snapshot;
+      this.cache = state;
+      if (notifyIfChanged) this.notify();
     } catch {
-      return [];
+      console.error('Server tidak terjangkau');
     }
   }
 
+  /** Panggil sekali sebelum aplikasi dirender. */
+  public async init(): Promise<void> {
+    await this.pull(false);
+    setInterval(() => this.pull(true), 3000);
+  }
+
+  private readItems(): Item[] {
+    return structuredClone(this.cache.items);
+  }
   private writeItems(items: Item[]): void {
-    localStorage.setItem(KEYS.items, JSON.stringify(items));
+    this.cache.items = items;
+    this.push('items', items);
   }
 
   private readLoans(): Loan[] {
-    try {
-      const raw = localStorage.getItem(KEYS.loans);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return structuredClone(this.cache.loans);
   }
-
   private writeLoans(loans: Loan[]): void {
-    localStorage.setItem(KEYS.loans, JSON.stringify(loans));
+    this.cache.loans = loans;
+    this.push('loans', loans);
   }
 
   private readLoanItems(): LoanItem[] {
-    try {
-      const raw = localStorage.getItem(KEYS.loanItems);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    return structuredClone(this.cache.loanItems);
   }
-
   private writeLoanItems(li: LoanItem[]): void {
-    localStorage.setItem(KEYS.loanItems, JSON.stringify(li));
-  }
-
-  private readUsers(): User[] {
-    try {
-      const raw = localStorage.getItem(KEYS.users);
-      return raw ? JSON.parse(raw) : SEED_USERS;
-    } catch {
-      return SEED_USERS;
-    }
+    this.cache.loanItems = li;
+    this.push('loanItems', li);
   }
 
   /** Ensure DB is seeded on first run. */
-  private ensureSeeded(): void {
-    if (!localStorage.getItem(KEYS.items)) {
-      this.writeItems(SEED_ITEMS.map((i) => ({ ...i })));
+ private ensureSeeded(): void {
+    if (!localStorage.getItem(KEYS.users)) {
+      localStorage.setItem(KEYS.users, JSON.stringify(SEED_USERS));
     }
+  
     if (!localStorage.getItem(KEYS.loans)) {
       this.writeLoans([]);
     }
