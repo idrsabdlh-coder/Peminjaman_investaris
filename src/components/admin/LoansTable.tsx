@@ -43,7 +43,6 @@ export const LoansTable: React.FC<LoansTableProps> = ({
   const [correctingLoan, setCorrectingLoan] = useState<Loan | null>(null);
   const [correctionForm, setCorrectionForm] = useState({
     borrower_name: '',
-    employee_id: '',
     division: '',
     phone: '',
     loan_date: '',
@@ -78,7 +77,6 @@ export const LoansTable: React.FC<LoansTableProps> = ({
     setCorrectingLoan(loan);
     setCorrectionForm({
       borrower_name: loan.borrower_name,
-      employee_id: loan.employee_id,
       division: loan.division,
       phone: loan.phone || '',
       loan_date: loan.loan_date,
@@ -105,7 +103,6 @@ export const LoansTable: React.FC<LoansTableProps> = ({
       DB.correctLoan({
         loan_id: correctingLoan.id,
         borrower_name: correctionForm.borrower_name,
-        employee_id: correctionForm.employee_id,
         division: correctionForm.division,
         phone: correctionForm.phone,
         loan_date: correctionForm.loan_date,
@@ -272,7 +269,7 @@ export const LoansTable: React.FC<LoansTableProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="Cari peminjam, NIK, divisi, atau nama barang..."
+              placeholder="Cari peminjam, divisi, atau nama barang..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -390,7 +387,7 @@ export const LoansTable: React.FC<LoansTableProps> = ({
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-                <th className="py-3 px-3">Peminjam & NIK</th>
+                <th className="py-3 px-3">Peminjam</th>
                 <th className="py-3 px-3">Divisi</th>
                 <th className="py-3 px-3">Barang & Qty</th>
                 <th className="py-3 px-3">Tgl Pinjam</th>
@@ -416,9 +413,11 @@ export const LoansTable: React.FC<LoansTableProps> = ({
                       <div className="font-bold text-slate-900">
                         {loan.borrower_name}
                       </div>
-                      <div className="font-mono text-[11px] text-slate-500">
-                        {loan.employee_id} {loan.phone ? `· ${loan.phone}` : ''}
-                      </div>
+                      {loan.phone && (
+                        <div className="font-mono text-[11px] text-slate-500">
+                          {loan.phone}
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3 px-3 text-slate-700">
@@ -571,13 +570,9 @@ export const LoansTable: React.FC<LoansTableProps> = ({
 
             <div className="p-5 space-y-4 text-xs sm:text-sm">
               <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div>
+                <div className="col-span-2">
                   <span className="text-slate-500 block text-[11px]">Nama Peminjam</span>
                   <span className="font-bold text-slate-900">{detailLoan.borrower_name}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[11px]">NIK / ID</span>
-                  <span className="font-bold text-slate-900 font-mono">{detailLoan.employee_id}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[11px]">Divisi</span>
@@ -618,7 +613,6 @@ export const LoansTable: React.FC<LoansTableProps> = ({
                           <span className="font-semibold text-slate-800 block text-xs">
                             {it.item_name}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-mono">{it.item_code}</span>
                         </div>
                       </div>
                       <div className="text-right">
@@ -690,31 +684,17 @@ export const LoansTable: React.FC<LoansTableProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">NIK / ID</label>
-                  <input
-                    type="text"
-                    required
-                    value={correctionForm.employee_id}
-                    onChange={(e) =>
-                      setCorrectionForm({ ...correctionForm, employee_id: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl uppercase font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Divisi</label>
-                  <input
-                    type="text"
-                    required
-                    value={correctionForm.division}
-                    onChange={(e) =>
-                      setCorrectionForm({ ...correctionForm, division: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl"
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Divisi</label>
+                <input
+                  type="text"
+                  required
+                  value={correctionForm.division}
+                  onChange={(e) =>
+                    setCorrectionForm({ ...correctionForm, division: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -751,7 +731,7 @@ export const LoansTable: React.FC<LoansTableProps> = ({
                 <textarea
                   rows={2}
                   required
-                  placeholder="Contoh: Salah ketik NIK dari karyawan saat input form kiosk."
+                  placeholder="Contoh: Salah ketik nama peminjam saat input form."
                   value={correctionForm.reason}
                   onChange={(e) =>
                     setCorrectionForm({ ...correctionForm, reason: e.target.value })

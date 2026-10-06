@@ -19,8 +19,8 @@ interface ReturnViewProps {
 }
 
 export const ReturnView: React.FC<ReturnViewProps> = ({ onReturnSuccess }) => {
-  const [searchEmployeeId, setSearchEmployeeId] = useState('');
-  const [searchedId, setSearchedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchedQuery, setSearchedQuery] = useState<string | null>(null);
   const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -37,36 +37,36 @@ export const ReturnView: React.FC<ReturnViewProps> = ({ onReturnSuccess }) => {
     message: string;
   } | null>(null);
 
-  // Search loans for employee
+  // Search loans for borrower by name or division
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setFeedback(null);
     setSelectedLoan(null);
 
-    const targetNik = searchEmployeeId.trim();
-    if (!targetNik) {
+    const query = searchQuery.trim();
+    if (!query) {
       setFeedback({
         type: 'error',
-        message: 'Masukkan ID Karyawan Anda untuk mencari peminjaman.',
+        message: 'Masukkan nama peminjam atau divisi untuk mencari peminjaman.',
       });
       return;
     }
 
     setIsSearching(true);
     try {
-      // T-2.10 & T-2.14: Only retrieve active loans for this specific employee
+      // Cari peminjaman aktif berdasarkan nama atau divisi
       const result = DB.getLoans({
-        employeeIdOnly: targetNik,
+        search: query,
         status: 'belum_kembali',
       });
 
       setActiveLoans(result.data);
-      setSearchedId(targetNik);
+      setSearchedQuery(query);
 
       if (result.data.length === 0) {
         setFeedback({
           type: 'error',
-          message: `Tidak ditemukan peminjaman aktif untuk NIK: "${targetNik}". Pastikan NIK sudah benar atau barang sudah pernah dikembalikan.`,
+          message: `Tidak ditemukan peminjaman aktif untuk "${query}". Pastikan nama atau divisi sudah benar, atau barang sudah pernah dikembalikan.`,
         });
       }
     } catch {
@@ -127,9 +127,9 @@ export const ReturnView: React.FC<ReturnViewProps> = ({ onReturnSuccess }) => {
       // Reset selection
       setSelectedLoan(null);
       // Refresh search list
-      if (searchedId) {
+      if (searchedQuery) {
         const refreshed = DB.getLoans({
-          employeeIdOnly: searchedId,
+          search: searchedQuery,
           status: 'belum_kembali',
         });
         setActiveLoans(refreshed.data);
@@ -158,22 +158,22 @@ export const ReturnView: React.FC<ReturnViewProps> = ({ onReturnSuccess }) => {
               Formulir Pengembalian Mandiri
             </h2>
             <p className="text-xs text-slate-500">
-              Masukkan ID Anda untuk melihat dan memverifikasi pengembalian barang yang sedang dipinjam.
+              Masukkan nama atau divisi Anda untuk melihat dan memverifikasi pengembalian barang yang sedang dipinjam.
             </p>
           </div>
         </div>
 
-        {/* ID Lookup Form (T-2.10 & T-2.14: Isolasi Privasi) */}
+        {/* Name / Division Lookup Form */}
         <form onSubmit={handleSearch} className="mt-5 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
             <input
               type="text"
               required
-              placeholder="Ketik ID Karyawan Anda (misal: EMP-1042)..."
-              value={searchEmployeeId}
-              onChange={(e) => setSearchEmployeeId(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-slate-300 font-mono focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent uppercase"
+              placeholder="Ketik nama peminjam atau divisi (misal: Budi / IT)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-slate-300 font-mono focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
           <button
@@ -212,11 +212,11 @@ export const ReturnView: React.FC<ReturnViewProps> = ({ onReturnSuccess }) => {
       )}
 
       {/* List of Active Loans for this Employee */}
-      {searchedId && activeLoans.length > 0 && !selectedLoan && (
+      {searchedQuery && activeLoans.length > 0 && !selectedLoan && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-slate-900">
-              Peminjaman Aktif untuk NIK <span className="font-mono text-blue-600">{searchedId}</span>
+              Peminjaman Aktif untuk <span className="font-mono text-blue-600">"{searchedQuery}"</span>
             </h3>
             <span className="text-xs text-slate-500">
               {activeLoans.length} peminjaman belum dikembalikan
@@ -339,7 +339,7 @@ export const ReturnView: React.FC<ReturnViewProps> = ({ onReturnSuccess }) => {
                           {it.item_name}
                         </span>
                         <span className="text-xs text-slate-500">
-                          Jumlah: <strong className="text-slate-800">{it.qty} unit</strong> ({it.item_code})
+                          Jumlah: <strong className="text-slate-800">{it.qty} unit</strong>
                         </span>
                       </div>
                     </div>

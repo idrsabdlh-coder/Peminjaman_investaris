@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Auth } from '../../services/auth';
-import { Shield, Lock, Mail, AlertCircle, X, CheckCircle2 } from 'lucide-react';
+import { Shield, Lock, User, AlertCircle, X } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onClose,
   onLoginSuccess,
 }) => {
-  const [email, setEmail] = useState('admin@kantor.id');
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('password123');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,13 +26,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setIsLoading(true);
 
     setTimeout(() => {
-      const res = Auth.login(email, password);
+      const res = Auth.login(username, password);
       setIsLoading(false);
       if (res.success) {
         onLoginSuccess();
         onClose();
       } else {
-        setErrorMessage(res.message || 'Login gagal. Periksa kembali email dan password.');
+        setErrorMessage(res.message || 'Login gagal. Periksa kembali username dan password.');
       }
     }, 200);
   };
@@ -54,7 +54,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </div>
           <h3 className="text-lg font-bold">Login Petugas Admin</h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Akses kelola inventaris barang & peminjaman kantor
+            Akses kelola inventaris barang &amp; peminjaman kantor
           </p>
         </div>
 
@@ -69,17 +69,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Email Petugas
+              Username
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                placeholder="admin@kantor.id"
+                placeholder="Masukkan username..."
+                autoComplete="username"
               />
             </div>
           </div>
@@ -97,6 +98,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 placeholder="••••••••"
+                autoComplete="current-password"
               />
             </div>
           </div>
@@ -104,7 +106,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {/* Seed credentials hint for convenience */}
           <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-[11px] text-blue-800 space-y-1">
             <span className="font-bold block text-blue-900">Akun Admin Default (Seeder):</span>
-            <div>Email: <code className="font-mono font-semibold">admin@kantor.id</code></div>
+            <div>Username: <code className="font-mono font-semibold">admin</code></div>
             <div>Password: <code className="font-mono font-semibold">password123</code></div>
           </div>
 

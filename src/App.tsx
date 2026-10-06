@@ -111,7 +111,7 @@ export default function App() {
             <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
               <span>Sistem Peminjaman & Inventaris Kantor © 2026</span>
               <span className="text-[11px] text-slate-400">
-                Layar Sentuh Komputer Bersama · Privasi Terisolasi per NIK
+                Layar Sentuh Komputer Bersama · Privasi Terisolasi per ID Peminjam
               </span>
             </div>
           </footer>

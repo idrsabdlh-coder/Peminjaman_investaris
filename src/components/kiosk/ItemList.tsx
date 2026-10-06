@@ -20,7 +20,7 @@ export const ItemList: React.FC<ItemListProps> = ({
     if (!q) return true;
     return (
       item.name.toLowerCase().includes(q) ||
-      item.code.toLowerCase().includes(q) ||
+      item.category.toLowerCase().includes(q) ||
       (item.notes && item.notes.toLowerCase().includes(q))
     );
   });
@@ -36,7 +36,7 @@ export const ItemList: React.FC<ItemListProps> = ({
             Perlu Alat atau Perangkat Kantor?
           </h2>
           <p className="text-sm sm:text-base text-blue-100 mb-6 leading-relaxed">
-            Pilih barang di bawah ini, atau langsung isi formulir peminjaman dengan NIK dan waktu pengembalian.
+            Pilih barang di bawah ini, atau langsung isi formulir peminjaman sebagai karyawan atau anak magang.
           </p>
           <button
             type="button"
@@ -85,7 +85,7 @@ export const ItemList: React.FC<ItemListProps> = ({
               <div className={`min-w-0 ${isOutOfStock ? 'opacity-60' : ''}`}>
                 <p className="font-semibold text-slate-900 text-sm truncate">{item.name}</p>
                 <p className="text-xs text-slate-500">
-                  <span className="font-mono">{item.code}</span>
+                  
                   {' · '}
                   {isOutOfStock ? (
                     <span className="text-amber-700 font-medium">Sedang dipinjam semua</span>

@@ -73,7 +73,7 @@ export class PDFExportService {
         loan.items && loan.items.some((i) => i.return_condition)
           ? loan.items
               .filter((i) => i.return_condition)
-              .map((i) => `${i.item_code}: ${i.return_condition}`)
+              .map((i) => `${i.item_name}: ${i.return_condition}`)
               .join(', ')
           : '-';
 
@@ -84,8 +84,7 @@ export class PDFExportService {
 
       return [
         (index + 1).toString(),
-        loan.borrower_name,
-        loan.employee_id,
+         `${loan.borrower_name}\n(${loan.borrower_type === 'magang' ? 'Anak Magang' : 'Karyawan'})`,
         loan.division,
         itemsList,
         this.formatDate(loan.loan_date),
@@ -102,7 +101,7 @@ export class PDFExportService {
         [
           'No',
           'Nama Peminjam',
-          'NIK / ID',
+          'NIM / ID',
           'Divisi',
           'Barang & Jumlah',
           'Tgl Pinjam',
@@ -198,12 +197,12 @@ export class PDFExportService {
     doc.setTextColor(100, 116, 139);
     doc.text(`Waktu Cetak: ${printDate} | Total Barang: ${items.length} Macam`, 14, 21);
 
-    const body = items.map((item, idx) => {
+        const body = items.map((item, idx) => {
       const borrowedQty = item.total_qty - item.available_qty;
       return [
         (idx + 1).toString(),
-        item.code,
         item.name,
+        item.category,
         item.total_qty.toString(),
         item.available_qty.toString(),
         borrowedQty.toString(),
@@ -219,6 +218,7 @@ export class PDFExportService {
           'No',
           'Kode',
           'Nama Barang',
+          'Kategori',
           'Total',
           'Tersedia',
           'Dipinjam',
@@ -241,13 +241,14 @@ export class PDFExportService {
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 10 },
-        1: { halign: 'center', cellWidth: 22, fontStyle: 'bold' },
-        2: { cellWidth: 60 },
-        3: { halign: 'center', cellWidth: 16 },
-        4: { halign: 'center', cellWidth: 18 },
-        5: { halign: 'center', cellWidth: 18 },
-        6: { halign: 'center', cellWidth: 20 },
-        7: { cellWidth: 28 },
+        1: { halign: 'center', cellWidth: 20, fontStyle: 'bold' },
+        2: { cellWidth: 44 },
+        3: { cellWidth: 26 },
+        4: { halign: 'center', cellWidth: 12 },
+        5: { halign: 'center', cellWidth: 16 },
+        6: { halign: 'center', cellWidth: 16 },
+        7: { halign: 'center', cellWidth: 18 },
+        8: { cellWidth: 20 },
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252],

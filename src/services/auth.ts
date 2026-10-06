@@ -55,10 +55,10 @@ class AuthService {
     return this.user;
   }
 
-  public login(email: string, password: string): { success: boolean; message?: string } {
-    const user = DB.findUserByEmail(email);
+  public login(username: string, password: string): { success: boolean; message?: string } {
+    const user = DB.findUserByUsername(username);
     if (!user || user.passwordHash !== password) {
-      return { success: false, message: 'Email atau password salah!' };
+      return { success: false, message: 'Username atau password salah!' };
     }
 
     this.user = user;

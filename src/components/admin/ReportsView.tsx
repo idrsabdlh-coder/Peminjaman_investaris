@@ -229,7 +229,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ allItems }) => {
               <tr className="border-b border-slate-200 text-slate-600 font-semibold">
                 <th className="py-2.5 px-3">No</th>
                 <th className="py-2.5 px-3">Peminjam</th>
-                <th className="py-2.5 px-3">NIK</th>
+                <th className="py-2.5 px-3">ID/NIM</th>
                 <th className="py-2.5 px-3">Divisi</th>
                 <th className="py-2.5 px-3">Barang & Qty</th>
                 <th className="py-2.5 px-3">Tgl Pinjam</th>
@@ -244,8 +244,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ allItems }) => {
                   <td className="py-2 px-3 text-slate-400">{idx + 1}</td>
                   <td className="py-2 px-3 font-semibold text-slate-800">
                     {loan.borrower_name}
+                    {loan.borrower_type === 'magang' && (
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 text-[10px] font-semibold">
+                        Magang
+                      </span>
+                    )}
                   </td>
-                  <td className="py-2 px-3 font-mono text-slate-600">{loan.employee_id}</td>
                   <td className="py-2 px-3 text-slate-600">{loan.division}</td>
                   <td className="py-2 px-3">
                     {loan.items?.map((it) => `${it.item_name} (${it.qty}x)`).join(', ')}

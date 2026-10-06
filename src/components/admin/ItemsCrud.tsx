@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Item, ItemCondition } from '../../types';
+import { Item, ItemCondition, ItemCategory, ITEM_CATEGORIES } from '../../types';
 import { DB } from '../../services/db';
+import { CATEGORY_STYLES } from '../../utils/category';
 import {
-  Package,
   Plus,
   Search,
   Edit2,
@@ -12,7 +12,6 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Info,
 } from 'lucide-react';
 
 interface ItemsCrudProps {
@@ -21,17 +20,19 @@ interface ItemsCrudProps {
 
 export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Form Fields
   const [formData, setFormData] = useState({
-    code: '',
     name: '',
+    category: 'Elektronik' as ItemCategory,
     total_qty: 1,
     condition: 'baik' as ItemCondition,
     notes: '',
@@ -45,18 +46,26 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
   // Retrieve data with pagination
   const result = DB.getItems({
     search: searchQuery,
+    category: categoryFilter || undefined,
     page: currentPage,
     perPage: itemsPerPage,
   });
 
+  const closeModal = () => {
+    setIsAddModalOpen(false);
+    setEditingItem(null);
+    setModalError(null);
+  };
+
   const handleOpenAddModal = () => {
     setFormData({
-      code: '',
       name: '',
+      category: 'Elektronik',
       total_qty: 1,
       condition: 'baik',
       notes: '',
     });
+    setModalError(null);
     setIsAddModalOpen(true);
     setNotification(null);
   };
@@ -64,12 +73,13 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
   const handleOpenEditModal = (item: Item) => {
     setEditingItem(item);
     setFormData({
-      code: item.code,
       name: item.name,
+      category: item.category,
       total_qty: item.total_qty,
       condition: item.condition,
       notes: item.notes || '',
     });
+    setModalError(null);
     setNotification(null);
   };
 
@@ -78,9 +88,9 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
     e.preventDefault();
     try {
       // T-1.15: available_qty otomatis sama dengan total_qty saat tambah barang
-      DB.createItem({
-        code: formData.code,
+      const created = DB.createItem({
         name: formData.name,
+        category: formData.category,
         total_qty: Number(formData.total_qty),
         condition: formData.condition,
         notes: formData.notes,
@@ -88,15 +98,12 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
 
       setNotification({
         type: 'success',
-        message: `Barang "${formData.name}" berhasil ditambahkan dengan stok tersedia sama dengan total (${formData.total_qty} unit).`,
+        message: `Barang "${created.name}" (${created.category}) berhasil ditambahkan dengan stok ${created.total_qty} unit.`,
       });
-      setIsAddModalOpen(false);
+      closeModal();
       onDataChanged();
     } catch (err: any) {
-      setNotification({
-        type: 'error',
-        message: err.message || 'Gagal menambahkan barang.',
-      });
+      setModalError(err.message || 'Gagal menambahkan barang.');
     }
   };
 
@@ -107,8 +114,8 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
 
     try {
       DB.updateItem(editingItem.id, {
-        code: formData.code,
         name: formData.name,
+        category: formData.category,
         total_qty: Number(formData.total_qty),
         condition: formData.condition,
         notes: formData.notes,
@@ -118,20 +125,17 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
         type: 'success',
         message: `Data barang "${formData.name}" berhasil diperbarui.`,
       });
-      setEditingItem(null);
+      closeModal();
       onDataChanged();
     } catch (err: any) {
-      setNotification({
-        type: 'error',
-        message: err.message || 'Gagal memperbarui data barang.',
-      });
+      setModalError(err.message || 'Gagal memperbarui data barang.');
     }
   };
 
   // Delete Action (T-1.17: Cegah hapus bila ada peminjaman aktif)
   const handleDeleteItem = (item: Item) => {
     const confirmDelete = window.confirm(
-      `Apakah Anda yakin ingin menghapus barang "${item.name}" (${item.code})?`
+      `Apakah Anda yakin ingin menghapus barang "${item.name}"?`
     );
     if (!confirmDelete) return;
 
@@ -139,8 +143,15 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
       DB.deleteItem(item.id);
       setNotification({
         type: 'success',
-        message: `Barang "${item.name}" berhasil dihapus menggunakan soft-delete.`,
+        message: `Barang "${item.name}" berhasil dihapus.`,
       });
+      // Jaga agar halaman tidak kosong setelah hapus
+      const after = DB.getItems({
+        search: searchQuery,
+        category: categoryFilter || undefined,
+        perPage: itemsPerPage,
+      });
+      setCurrentPage((p) => Math.min(p, after.lastPage));
       onDataChanged();
     } catch (err: any) {
       setNotification({
@@ -152,21 +163,12 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
 
   return (
     <div className="space-y-5">
-      {/* Top Header & Add Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">
-            Daftar Inventaris & Aset Kantor
-          </h2>
-          <p className="text-xs text-slate-500">
-            Kelola data master barang, stok total, stok tersedia, serta kondisi fisik.
-          </p>
-        </div>
-
+      {/* Add Button */}
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={handleOpenAddModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors"
         >
           <Plus className="w-4 h-4" />
           Tambah Barang Baru
@@ -201,19 +203,37 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
       )}
 
       {/* Filter and Search Bar (T-1.16) */}
-      <div className="flex items-center justify-between gap-4 bg-white p-3.5 rounded-xl border border-slate-200">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Cari kode atau nama barang..."
-            value={searchQuery}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              placeholder="Cari nama atau kategori..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <select
+            value={categoryFilter}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
+              setCategoryFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-          />
+            className="py-1.5 px-3 text-sm rounded-lg border border-slate-300 bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Semua Kategori</option>
+            {ITEM_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="text-xs text-slate-500 font-medium">
@@ -227,8 +247,8 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-                <th className="py-3 px-4">Kode</th>
                 <th className="py-3 px-4">Nama Barang</th>
+                <th className="py-3 px-4">Kategori</th>
                 <th className="py-3 px-4 text-center">Total Stok</th>
                 <th className="py-3 px-4 text-center">Tersedia</th>
                 <th className="py-3 px-4 text-center">Dipinjam</th>
@@ -243,11 +263,17 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
 
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-blue-700">
-                      {item.code}
-                    </td>
                     <td className="py-3 px-4 font-semibold text-slate-900">
                       {item.name}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${
+                          CATEGORY_STYLES[item.category] ?? CATEGORY_STYLES.Lainnya
+                        }`}
+                      >
+                        {item.category}
+                      </span>
                     </td>
                     <td className="py-3 px-4 text-center font-bold text-slate-800">
                       {item.total_qty}
@@ -274,7 +300,7 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
                     </td>
                     <td className="py-3 px-4">
                       <span className="capitalize text-slate-700 font-medium">
-                        {item.condition}
+                        {item.condition.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-500 max-w-xs truncate">
@@ -294,7 +320,7 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
                           type="button"
                           onClick={() => handleDeleteItem(item)}
                           className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          title="Hapus barang (Soft Delete)"
+                          title="Hapus barang"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -353,10 +379,7 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
               </h3>
               <button
                 type="button"
-                onClick={() => {
-                  setIsAddModalOpen(false);
-                  setEditingItem(null);
-                }}
+                onClick={closeModal}
                 className="text-slate-400 hover:text-slate-600"
               >
                 <X className="w-5 h-5" />
@@ -367,18 +390,37 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
               onSubmit={editingItem ? handleSaveEdit : handleSaveAdd}
               className="p-5 space-y-4 text-xs sm:text-sm"
             >
+              {modalError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-700">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
+              {/* Kategori Barang */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Kode Barang (Unik) <span className="text-red-500">*</span>
+                <label className="block font-semibold text-slate-700 mb-1.5">
+                  Kategori Barang <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: PRJ-01"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="flex flex-wrap gap-2">
+                  {ITEM_CATEGORIES.map((cat) => {
+                    const isSelected = formData.category === cat;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, category: cat })}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-blue-300 hover:text-blue-700'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>
@@ -454,10 +496,7 @@ export const ItemsCrud: React.FC<ItemsCrudProps> = ({ onDataChanged }) => {
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsAddModalOpen(false);
-                    setEditingItem(null);
-                  }}
+                  onClick={closeModal}
                   className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Batal
