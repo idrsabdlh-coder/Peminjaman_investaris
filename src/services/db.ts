@@ -25,9 +25,7 @@ const KEYS = {
   loanItems: 'kantor_db_loan_items',
   users: 'kantor_db_users',
 } as const;
-const API =
-  (import.meta as any).env?.VITE_API_URL ??
-  `http://${window.location.hostname}:3001/api`;
+const API = (import.meta as any).env?.VITE_API_URL ?? '/api';
 type StoreKey = 'items' | 'loans' | 'loanItems';
 
 // ---------- Seed Data ----------
@@ -143,7 +141,7 @@ class DBService {
     this.notify();
   }
 
-  private push(key: StoreKey, data: unknown[]): void {
+   private push(key: StoreKey, data: unknown[]): void {
     if (this.testMode) return;
     this.pending++;
     fetch(`${API}/state/${key}`, {
@@ -151,7 +149,13 @@ class DBService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
-      .catch(() => console.error('Gagal menyimpan ke server'))
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server membalas ${res.status}`);
+      })
+      .catch(() => {
+        console.error('Gagal menyimpan ke server');
+        alert('Gagal menyimpan ke server. Perubahan terakhir mungkin tidak tersimpan.');
+      })
       .finally(() => {
         this.pending--;
       });
