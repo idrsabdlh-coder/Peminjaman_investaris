@@ -1,47 +1,50 @@
-import express from "express";
-import Database from "better-sqlite3";
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import pg from 'pg';
 
-const db = new Database("database.sqlite");
-db.pragma("journal_mode = WAL");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS store (
+const KEYS = ['items', 'loans', 'loanItems'];
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS app_state (
     key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  );
+    data JSONB NOT NULL DEFAULT '[]'::jsonb
+  )
 `);
 
-const KEYS = ["items", "loans", "loanItems"];
-
 const app = express();
-app.use(express.json({ limit: "5mb" }));
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 
-// Izinkan akses dari halaman di port 3000
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,PUT,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
-
-app.get("/api/state", (req, res) => {
-  const state = {};
-  for (const key of KEYS) {
-    const row = db.prepare("SELECT value FROM store WHERE key = ?").get(key);
-    state[key] = row ? JSON.parse(row.value) : [];
+app.get('/api/state', async (_req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT key, data FROM app_state');
+    const state = { items: [], loans: [], loanItems: [] };
+    for (const r of rows) if (KEYS.includes(r.key)) state[r.key] = r.data;
+    res.json(state);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Gagal membaca data' });
   }
-  res.json(state);
 });
 
-app.put("/api/state/:key", (req, res) => {
+app.put('/api/state/:key', async (req, res) => {
   const { key } = req.params;
-  if (!KEYS.includes(key)) return res.status(400).json({ error: "Key tidak dikenal" });
-  if (!Array.isArray(req.body)) return res.status(400).json({ error: "Body harus array" });
-
-  db.prepare(
-    "INSERT INTO store (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-  ).run(key, JSON.stringify(req.body));
-  res.json({ ok: true });
+  if (!KEYS.includes(key)) return res.status(400).json({ error: 'Key tidak valid' });
+  if (!Array.isArray(req.body)) return res.status(400).json({ error: 'Body harus array' });
+  try {
+    await pool.query(
+      `INSERT INTO app_state (key, data) VALUES ($1, $2::jsonb)
+       ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
+      [key, JSON.stringify(req.body)]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Gagal menyimpan data' });
+  }
 });
 
-app.listen(3001, "0.0.0.0", () => console.log("API jalan di port 3001"));
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, '0.0.0.0', () => console.log(`API jalan di port ${PORT}`));

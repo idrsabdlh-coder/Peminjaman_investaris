@@ -11,3 +11,7 @@ coverage/
 database.sqlite
 database.sqlite-shm
 database.sqlite-wal
+.env
+database.sqlite*
+node_modules
+dist

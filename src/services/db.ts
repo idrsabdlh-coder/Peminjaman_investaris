@@ -1,6 +1,7 @@
 /**
- * DB Service — localStorage-based in-memory database
- * Provides reactive CRUD for Items and Loans with pagination, filtering, and business logic.
+ * DB Service - cache di memori yang disinkronkan ke server (PostgreSQL).
+ * Menyediakan CRUD reaktif untuk Items dan Loans dengan pagination, filter, dan logika bisnis.
+ * Akun admin tetap disimpan di localStorage browser.
  */
 import {
   ITEM_CATEGORIES,
@@ -17,7 +18,7 @@ import {
   CorrectLoanDTO,
 } from '../types';
 
-// ─── Storage Keys ─────────────────────────────────────────────────────────────
+// ---------- Storage Keys ----------
 const KEYS = {
   items: 'kantor_db_items',
   loans: 'kantor_db_loans',
@@ -27,7 +28,7 @@ const KEYS = {
 const API = `http://${window.location.hostname}:3001/api`;
 type StoreKey = 'items' | 'loans' | 'loanItems';
 
-// ─── Seed Data ─────────────────────────────────────────────────────────────────
+// ---------- Seed Data ----------
 const SEED_USERS: User[] = [
   {
     id: 'user_admin_01',
@@ -41,7 +42,7 @@ const SEED_USERS: User[] = [
 // Barang dikosongkan: admin mengisi barang kantor sendiri lewat menu kelola barang.
 const SEED_ITEMS: Item[] = [];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ---------- Helpers ----------
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -78,7 +79,7 @@ function assertValidQty(qty: number, label = 'Jumlah'): void {
   }
 }
 
-// ─── Pagination Result ────────────────────────────────────────────────────────
+// ---------- Pagination Result ----------
 interface PagedResult<T> {
   data: T[];
   total: number;
@@ -96,7 +97,7 @@ function paginate<T>(list: T[], pageIn?: number, perPageIn?: number): PagedResul
   return { data: list.slice(start, start + perPage), total, page, perPage, lastPage };
 }
 
-// ─── DB Class ─────────────────────────────────────────────────────────────────
+// ---------- DB Class ----------
 class DBService {
   private listeners: (() => void)[] = [];
 
@@ -112,8 +113,8 @@ class DBService {
     };
   }
 
-  // ── Storage R/W ─────────────────────────────────────────────────────────────
-   private cache: { items: Item[]; loans: Loan[]; loanItems: LoanItem[] } = {
+  // ---------- Storage R/W ----------
+  private cache: { items: Item[]; loans: Loan[]; loanItems: LoanItem[] } = {
     items: [],
     loans: [],
     loanItems: [],
@@ -121,7 +122,27 @@ class DBService {
   private lastSnapshot = '';
   private pending = 0;
 
+  // Mode uji: perubahan hanya di memori dan TIDAK dikirim ke server.
+  private testMode = false;
+  private backup: { items: Item[]; loans: Loan[]; loanItems: LoanItem[] } | null = null;
+
+  /** Mulai mode uji: simpan salinan data asli, lalu hentikan sinkronisasi ke server. */
+  public beginTestMode(): void {
+    if (this.testMode) return;
+    this.backup = structuredClone(this.cache);
+    this.testMode = true;
+  }
+
+  /** Akhiri mode uji: kembalikan data asli dan lanjutkan sinkronisasi. */
+  public endTestMode(): void {
+    if (this.backup) this.cache = this.backup;
+    this.backup = null;
+    this.testMode = false;
+    this.notify();
+  }
+
   private push(key: StoreKey, data: unknown[]): void {
+    if (this.testMode) return;
     this.pending++;
     fetch(`${API}/state/${key}`, {
       method: 'PUT',
@@ -135,11 +156,11 @@ class DBService {
   }
 
   private async pull(notifyIfChanged: boolean): Promise<void> {
-    if (this.pending > 0) return;
+    if (this.testMode || this.pending > 0) return;
     try {
       const res = await fetch(`${API}/state`);
       const state = await res.json();
-      if (this.pending > 0) return; // ada penyimpanan yang baru mulai
+      if (this.testMode || this.pending > 0) return; // ada penyimpanan/uji yang baru mulai
       const snapshot = JSON.stringify(state);
       if (snapshot === this.lastSnapshot) return;
       this.lastSnapshot = snapshot;
@@ -180,18 +201,8 @@ class DBService {
     this.push('loanItems', li);
   }
 
-  /** Ensure DB is seeded on first run. */
- private ensureSeeded(): void {
-    if (!localStorage.getItem(KEYS.users)) {
-      localStorage.setItem(KEYS.users, JSON.stringify(SEED_USERS));
-    }
-  
-    if (!localStorage.getItem(KEYS.loans)) {
-      this.writeLoans([]);
-    }
-    if (!localStorage.getItem(KEYS.loanItems)) {
-      this.writeLoanItems([]);
-    }
+  /** Pastikan akun admin seed ada di localStorage. */
+  private ensureSeeded(): void {
     if (!localStorage.getItem(KEYS.users)) {
       localStorage.setItem(KEYS.users, JSON.stringify(SEED_USERS));
     }
@@ -199,24 +210,11 @@ class DBService {
 
   constructor() {
     this.ensureSeeded();
-    this.resetDataOnce();
-    // Also listen for changes from other tabs
+    // Dengarkan perubahan dari tab lain
     window.addEventListener('storage', () => this.notify());
   }
 
-  /** Kosongkan barang dan peminjaman satu kali saja (website masih baru). */
-  private resetDataOnce(): void {
-    const FLAG = 'kantor_db_data_reset_v1';
-    if (localStorage.getItem(FLAG)) return;
-
-    this.writeItems([]);
-    this.writeLoans([]);
-    this.writeLoanItems([]);
-
-    localStorage.setItem(FLAG, '1');
-  }
-
-  // ── Reset ────────────────────────────────────────────────────────────────────
+  // ---------- Reset ----------
   public resetToSeed(): void {
     this.writeItems(SEED_ITEMS.map((i) => ({ ...i })));
     this.writeLoans([]);
@@ -241,7 +239,16 @@ class DBService {
     this.notify();
   }
 
-  // ── Users ────────────────────────────────────────────────────────────────────
+  // ---------- Users ----------
+  private readUsers(): User[] {
+    try {
+      const raw = localStorage.getItem(KEYS.users);
+      return raw ? JSON.parse(raw) : SEED_USERS;
+    } catch {
+      return SEED_USERS;
+    }
+  }
+
   public findUserByUsername(username: string): User | undefined {
     return this.readUsers().find((u) => u.username === username);
   }
@@ -250,7 +257,7 @@ class DBService {
     return this.readUsers().find((u) => u.email === email);
   }
 
-  // ── Items ────────────────────────────────────────────────────────────────────
+  // ---------- Items ----------
   public getItems(
     options: {
       search?: string;
@@ -403,7 +410,7 @@ class DBService {
     return true;
   }
 
-  // ── Loans ────────────────────────────────────────────────────────────────────
+  // ---------- Loans ----------
 
   /** Compute display_status and days_late for a loan object. */
   public computeLoanAccessors(loan: Omit<Loan, 'display_status' | 'days_late'>): Loan {
@@ -617,14 +624,14 @@ class DBService {
       allLoanItems[liIdx] = { ...li, return_condition: ret.condition };
 
       if (ret.condition === 'hilang') {
-        // T-5.3: Lost item — reduce total_qty but NOT available_qty
+        // T-5.3: Lost item - reduce total_qty but NOT available_qty
         items[itemIdx] = {
           ...items[itemIdx],
           total_qty: Math.max(0, items[itemIdx].total_qty - li.qty),
           updated_at: now,
         };
       } else {
-        // baik or rusak — restore available_qty
+        // baik or rusak - restore available_qty
         items[itemIdx] = {
           ...items[itemIdx],
           available_qty: items[itemIdx].available_qty + li.qty,
@@ -675,7 +682,7 @@ class DBService {
       throw new Error('Tanggal jatuh tempo tidak boleh sebelum tanggal pinjam.');
     }
 
-    const auditLine = `[${today}] KOREKSI ADMIN — Alasan: ${input.reason.trim()}`;
+    const auditLine = `[${today}] KOREKSI ADMIN - Alasan: ${input.reason.trim()}`;
     const updatedNotes = loan.notes ? `${loan.notes}\n${auditLine}` : auditLine;
 
     loans[idx] = {
@@ -695,7 +702,7 @@ class DBService {
     return this.enrichLoan(loans[idx]);
   }
 
-  // ── Summary Stats ─────────────────────────────────────────────────────────────
+  // ---------- Summary Stats ----------
   public getSummaryStats(): {
     borrowedCount: number;
     overdueCount: number;

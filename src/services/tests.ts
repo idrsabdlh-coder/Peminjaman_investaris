@@ -38,9 +38,12 @@ export class AppTestSuite {
   public static runAllTests(): TestResult[] {
     const results: TestResult[] = [];
 
-    // Cadangkan data asli
+    // Cadangkan data localStorage (akun admin & sesi)
     const backup: Record<string, string | null> = {};
     DB_KEYS.forEach((k) => (backup[k] = localStorage.getItem(k)));
+
+    // Aktifkan mode uji SEBELUM menyentuh data apa pun
+    DB.beginTestMode();
 
     try {
       // Ensure pristine test database state
@@ -65,12 +68,15 @@ export class AppTestSuite {
       // T-5.6: reset peminjaman mengosongkan riwayat dan memulihkan stok
       results.push(this.testClearLoansRestoresStock());
     } finally {
-      // Pulihkan data asli
+      // Pulihkan localStorage
       DB_KEYS.forEach((k) => {
         const v = backup[k];
         if (v === null) localStorage.removeItem(k);
         else localStorage.setItem(k, v);
       });
+
+      // Akhiri mode uji: data asli di memori dikembalikan, sinkronisasi ke server jalan lagi
+      DB.endTestMode();
     }
 
     return results;
