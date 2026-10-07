@@ -1,5 +1,7 @@
 # Website Peminjaman & Inventaris Barang Kantor (Versi Sederhana)
 faris
+fajar
+idris
 **Berdasarkan PRD v4.0 & DESIGN.md v3.0**
 
 Aplikasi web pencatatan peminjaman inventaris barang kantor yang menggantikan buku catatan. Dirancang untuk komputer kantor bersama dengan dua mode: layar sentuh Kiosk untuk karyawan tanpa login, dan Panel Admin untuk petugas inventaris yang dilindungi login.
