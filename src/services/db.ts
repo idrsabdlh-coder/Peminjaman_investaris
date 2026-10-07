@@ -25,7 +25,9 @@ const KEYS = {
   loanItems: 'kantor_db_loan_items',
   users: 'kantor_db_users',
 } as const;
-const API = `http://${window.location.hostname}:3001/api`;
+const API =
+  (import.meta as any).env?.VITE_API_URL ??
+  `http://${window.location.hostname}:3001/api`;
 type StoreKey = 'items' | 'loans' | 'loanItems';
 
 // ---------- Seed Data ----------
