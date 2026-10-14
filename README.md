@@ -2,7 +2,7 @@
 faris
 fajar
 idris
-**Berdasarkan PRD v4.0 & DESIGN.md v3.0**
+**Berdasarkan docs/PRD.md dan docs/SYSTEM-DESIGN.md**
 
 Aplikasi web pencatatan peminjaman inventaris barang kantor yang menggantikan buku catatan. Dirancang untuk komputer kantor bersama dengan dua mode: layar sentuh Kiosk untuk karyawan tanpa login, dan Panel Admin untuk petugas inventaris yang dilindungi login.
 
