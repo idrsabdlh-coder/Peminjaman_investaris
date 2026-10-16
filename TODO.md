@@ -119,7 +119,7 @@ Skema MySQL langsung memakai versi v5 (tanpa tahap antara "skema lama di MySQL")
 
 - [ ] **6.1 [BE] Skrip migrasi SQLite ke MySQL ⚙ (L).** `scripts/migrate-sqlite-to-mysql` sesuai SYSTEM-DESIGN bagian 11. SQLite hanya dibaca. Dilatih ke `inventaris_it_trial` sampai bersih sebelum ke produksi.
   *Selesai jika:* T-5.22 lulus (jumlah peminjaman, total stok, dan status cocok, BR-01 benar untuk semua barang).
-- [ ] **6.2 [PM] Rapikan divisi lama.** Satukan ejaan ganda dari data lama sebelum dipetakan ke tabel `divisions`.
+- [ ] **6.2 [PM] Rapikan divisi lama.** Satukan ejaan ganda dari data lama sebelum dipetakan ke tabel `divisions`. Ditunda ke awal Phase 6. Syarat: ekspor JSON loans dari server asli (disimpan di luar repo), skrip membaca berkas JSON tanpa menyambung ke basis data, CSV disetujui pengguna sebelum S61.
 - [ ] **6.3 [PM] Hitung fisik sekali.** Cocokkan stok sistem dengan barang di lemari dan tetapkan stok `rusak` awal lewat penyesuaian dan alur stok rusak (aturan lama memasukkan barang rusak ke `tersedia`).
 - [ ] **6.4 [BE] Backup terjadwal dan uji pulih (M).** `mysqldump` harian lewat Task Scheduler, retensi 14, salinan di perangkat lain, dan satu kali pemulihan ke basis data terpisah (SYSTEM-DESIGN 6A.7). T-5.23.
 - [ ] **6.5 [BE] Hardening MySQL (S).** Kata sandi root terisi, `bind-address=127.0.0.1`, port 3306 tertutup di firewall, hak akun sesuai 6A.3. T-5.31.
