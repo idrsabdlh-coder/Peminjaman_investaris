@@ -34,12 +34,12 @@ Skema MySQL langsung memakai versi v5 (tanpa tahap antara "skema lama di MySQL")
 
 ## Phase 0: Persiapan dan audit (S–M)
 
-- [ ] **0.1 [PM] Susun repo.** Pindahkan `PRD.md` dan `SYSTEM-DESIGN.md` ke `docs/`. Tambahkan `AGENTS.md` dan `TODO.md` di akar. Perbarui README (lihat `docs/SYSTEM-DESIGN.md` bagian 6).
+- [x] **0.1 [PM] Susun repo.** Pindahkan `PRD.md` dan `SYSTEM-DESIGN.md` ke `docs/`. Tambahkan `AGENTS.md` dan `TODO.md` di akar. Perbarui README (lihat `docs/SYSTEM-DESIGN.md` bagian 6).
   *Selesai jika:* semua tautan antar dokumen berfungsi di GitHub.
   *Ringkasan (Task 0.1, 12 Okt 2026):* Tambah PRD 5.3 Kebutuhan Tambahan (kategori/kondisi/tipe peminjam). Geser 5.3 Asumsi → 5.4. Tambah BR-28–33, perbarui BR-17 (kode klaim KMB-XXXXXX), perbarui FR-K-01/02, FR-A-03/05/06/11, tambah FR-A-18. Tambah T-5.33–35. SYSTEM-DESIGN: tambah tabel `categories`, `items.kategori_id`, `loans.tipe_peminjam` di ERD dan skema SQL; tambah endpoint `/api/kiosk/categories` dan `/api/admin/categories`; perbarui pemetaan migrasi (category, condition, borrower_type); tambah bagian 13 (strategi dua sistem berdampingan). Perbarui aturan kerja TODO/AGENTS. PRD versi 5.3, SYSTEM-DESIGN versi 1.3.
-- [ ] **0.2 [BE] Audit kode terhadap dokumen, tanpa mengubah kode.** Baca `server.js` dan `src/services/db.ts`, lalu tulis `docs/AUDIT-0.2.md`: di mana logika stok dihitung, validasi mana yang hanya ada di klien, endpoint mana yang tanpa autentikasi, skema tabel yang sebenarnya, dan selisih dengan SYSTEM-DESIGN.
+- [x] **0.2 [BE] Audit kode terhadap dokumen, tanpa mengubah kode.** Baca `server.js` dan `src/services/db.ts`, lalu tulis `docs/AUDIT-0.2.md`: di mana logika stok dihitung, validasi mana yang hanya ada di klien, endpoint mana yang tanpa autentikasi, skema tabel yang sebenarnya, dan selisih dengan SYSTEM-DESIGN.
   *Selesai jika:* ada daftar selisih, dan skema tabel sebenarnya tercatat untuk bahan skrip migrasi (6.1).
-- [ ] **0.3 [BE] Amankan titik awal.** Beri tag Git `prototipe-v4` dan salin `database.sqlite` ke luar folder proyek.
+- [x] **0.3 [BE] Amankan titik awal.** Beri tag Git `prototipe-v4` dan salin `database.sqlite` ke luar folder proyek.
 - [ ] **0.4 [PM] Putuskan hal yang masih terbuka dan perbarui PRD:** Sudah diputuskan di 0.1: kategori/kondisi/tipe peminjam, strategi dua sistem berdampingan (SYSTEM-DESIGN bagian 13), format kode klaim. Masih terbuka: (1) MySQL final dan pengelola server, (2) printer kiosk, pengecualian perpanjangan per barang, pelepasan otomatis pemesanan tak diambil, (3) operasi buku besar TANDAI_RUSAK, (4) bahasa server TypeScript atau JavaScript.
 - [ ] **0.5 [BE] Siapkan MySQL di Laragon.** Cek `SELECT VERSION();` (syarat ≥ 8.0.16 atau MariaDB ≥ 10.2.1). Setel kata sandi `root`. Buat basis data `inventaris_it_dev` dan `inventaris_it_test`. Buat akun `app_inventaris`, `migrator`, `backup` sesuai SYSTEM-DESIGN 6A.3. Setel `bind-address=127.0.0.1`, charset `utf8mb4`, zona waktu `+00:00`. Periksa `@@sql_mode`.
   *Selesai jika:* tiap akun hanya bisa melakukan hal yang diizinkan, dan port 3306 tidak terjangkau dari komputer lain.
@@ -119,7 +119,7 @@ Skema MySQL langsung memakai versi v5 (tanpa tahap antara "skema lama di MySQL")
 
 - [ ] **6.1 [BE] Skrip migrasi SQLite ke MySQL ⚙ (L).** `scripts/migrate-sqlite-to-mysql` sesuai SYSTEM-DESIGN bagian 11. SQLite hanya dibaca. Dilatih ke `inventaris_it_trial` sampai bersih sebelum ke produksi.
   *Selesai jika:* T-5.22 lulus (jumlah peminjaman, total stok, dan status cocok, BR-01 benar untuk semua barang).
-- [ ] **6.2 [PM] Rapikan divisi lama.** Satukan ejaan ganda dari data lama sebelum dipetakan ke tabel `divisions`.
+- [ ] **6.2 [PM] Rapikan divisi lama.** Satukan ejaan ganda dari data lama sebelum dipetakan ke tabel `divisions`. Ditunda ke awal Phase 6. Syarat: ekspor JSON loans dari server asli (disimpan di luar repo), skrip membaca berkas JSON tanpa menyambung ke basis data, CSV disetujui pengguna sebelum S61.
 - [ ] **6.3 [PM] Hitung fisik sekali.** Cocokkan stok sistem dengan barang di lemari dan tetapkan stok `rusak` awal lewat penyesuaian dan alur stok rusak (aturan lama memasukkan barang rusak ke `tersedia`).
 - [ ] **6.4 [BE] Backup terjadwal dan uji pulih (M).** `mysqldump` harian lewat Task Scheduler, retensi 14, salinan di perangkat lain, dan satu kali pemulihan ke basis data terpisah (SYSTEM-DESIGN 6A.7). T-5.23.
 - [ ] **6.5 [BE] Hardening MySQL (S).** Kata sandi root terisi, `bind-address=127.0.0.1`, port 3306 tertutup di firewall, hak akun sesuai 6A.3. T-5.31.
