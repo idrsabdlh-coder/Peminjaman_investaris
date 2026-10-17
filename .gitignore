@@ -1,21 +1,23 @@
+# Dependencies
 node_modules/
+
+# Production builds & output
 build/
 dist/
 coverage/
-.DS_Store
+
+# Logs & temp
 *.log
-.env*
+.DS_Store
+
+# Environment variables
+.env
+.env.*
+.env*.local
 !.env.example
 
-# Database lokal (berisi data peminjaman asli)
-database.sqlite
-database.sqlite-shm
-database.sqlite-wal
-.env
+# Local SQLite databases (data asli prototipe)
 database.sqlite*
-node_modules
-dist
 
-.env.local
-
-.env.local
+# SQL database dumps & migration raw files
+*.sql
